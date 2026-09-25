@@ -62,11 +62,11 @@ export interface EventData {
 }
 
 export const THESA_TEAMS = {
-  'jh-black': { id: -50331, name: 'THESA JH Black', shortName: 'JH Black', division: 'MS', pool: 'A' },
-  'jh-red': { id: -50332, name: 'THESA JH Red', shortName: 'JH Red', division: 'MS', pool: 'D' },
-  'jv-black': { id: -50329, name: 'THESA JV Black', shortName: 'JV Black', division: 'JV', pool: 'E' },
-  'jv-red': { id: -50330, name: 'THESA JV Red', shortName: 'JV Red', division: 'JV', pool: 'D' },
-  'var': { id: -50328, name: 'THESA Var', shortName: 'Varsity', division: 'Var', pool: 'D' },
+  'jh-black': { id: -50331, name: 'THESA JH Black', shortName: 'JH Black', division: 'MS' },
+  'jh-red': { id: -50332, name: 'THESA JH Red', shortName: 'JH Red', division: 'MS' },
+  'jv-black': { id: -50329, name: 'THESA JV Black', shortName: 'JV Black', division: 'JV' },
+  'jv-red': { id: -50330, name: 'THESA JV Red', shortName: 'JV Red', division: 'JV' },
+  'var': { id: -50328, name: 'THESA Var', shortName: 'Varsity', division: 'Var' },
 } as const;
 
 export type ThesaTeamKey = keyof typeof THESA_TEAMS;

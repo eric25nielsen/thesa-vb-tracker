@@ -62,7 +62,8 @@ export default function TeamView({ teamKey, team, poolMatches, bracketMatches, a
           {teamInfo.name}
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          {teamInfo.division} · Pool {teamInfo.pool}
+          {teamInfo.division}
+          {team?.PoolName && ` · ${team.PoolName}`}
         </p>
       </div>
 
@@ -82,7 +83,7 @@ export default function TeamView({ teamKey, team, poolMatches, bracketMatches, a
       {poolStandings.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
           <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-3">
-            Pool {teamInfo.pool} Standings
+            {team?.PoolName || 'Pool'} Standings
           </h3>
           <StandingsTable standings={poolStandings} highlightTeamId={teamInfo.id} />
           <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">

@@ -95,7 +95,7 @@ export async function fetchAllTeams(): Promise<FetchResult<Team[]>> {
     if (htmlResponseCount === divisionIds.length) {
       return {
         data: fallbackTeams,
-        isFallback: true,
+        isFallback: false,
         isNotPublished: true,
         timestamp: new Date().toISOString(),
         error: 'Schedule not published yet by AES'
@@ -132,7 +132,7 @@ export async function fetchPoolMatches(): Promise<FetchResult<Match[]>> {
       } else {
         return {
           data: [],
-          isFallback: true,
+          isFallback: false,
           isNotPublished: true,
           timestamp: new Date().toISOString(),
           error: 'Pool matches not published yet'
@@ -145,6 +145,7 @@ export async function fetchPoolMatches(): Promise<FetchResult<Match[]>> {
     return {
       data: [],
       isFallback: true,
+      isNotPublished: false,
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'API connection error'
     };
@@ -170,7 +171,7 @@ export async function fetchBracketMatches(): Promise<FetchResult<Match[]>> {
       } else {
         return {
           data: [],
-          isFallback: true,
+          isFallback: false,
           isNotPublished: true,
           timestamp: new Date().toISOString(),
           error: 'Bracket not published yet'
@@ -183,6 +184,7 @@ export async function fetchBracketMatches(): Promise<FetchResult<Match[]>> {
     return {
       data: [],
       isFallback: true,
+      isNotPublished: false,
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'API connection error'
     };
@@ -208,7 +210,7 @@ export async function fetchPools(divisionId: number): Promise<FetchResult<Pool[]
       } else {
         return {
           data: [],
-          isFallback: true,
+          isFallback: false,
           isNotPublished: true,
           timestamp: new Date().toISOString(),
           error: 'Pools not published yet'
@@ -221,6 +223,7 @@ export async function fetchPools(divisionId: number): Promise<FetchResult<Pool[]
     return {
       data: [],
       isFallback: true,
+      isNotPublished: false,
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'API connection error'
     };
