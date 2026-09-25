@@ -1,7 +1,6 @@
 import { EventData, Team, Match, Pool, PoolStanding } from './types';
 import { fallbackTeams } from './fallback-data';
 
-const AES_BASE_URL = 'https://results.advancedeventsystems.com/api/event/RGFsbGFzX0FuZ2Vsc19DbGFzc2ljXzIwMjY1';
 const EVENT_KEY = 'RGFsbGFzX0FuZ2Vsc19DbGFzc2ljXzIwMjY1';
 
 export interface FetchResult<T> {
@@ -12,27 +11,25 @@ export interface FetchResult<T> {
   error?: string;
 }
 
-function isJsonResponse(text: string): boolean {
-  const trimmed = text.trim();
-  return (trimmed.startsWith('{') || trimmed.startsWith('[')) && !trimmed.includes('<!doctype');
+async function fetchViaProxy(path: string = '') {
+  const url = `/api/aes?path=${encodeURIComponent(path)}`;
+  const response = await fetch(url);
+  return response.json();
 }
 
 export async function fetchEventData(): Promise<FetchResult<EventData>> {
   try {
-    const response = await fetch(AES_BASE_URL, {
-      next: { revalidate: 60 }
-    });
+    const result = await fetchViaProxy('');
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    if (result.status === 'ok') {
+      return {
+        data: result.data,
+        isFallback: false,
+        timestamp: new Date().toISOString()
+      };
     }
     
-    const data = await response.json();
-    return {
-      data,
-      isFallback: false,
-      timestamp: new Date().toISOString()
-    };
+    throw new Error(result.error || 'Failed to fetch event');
   } catch (error) {
     return {
       data: {
@@ -60,25 +57,16 @@ export async function fetchAllTeams(): Promise<FetchResult<Team[]>> {
   try {
     const divisionIds = [-50016, -50017, -50018, -50019];
     const allTeams: Team[] = [];
-    let htmlResponseCount = 0;
+    let notPublishedCount = 0;
     
     for (const divId of divisionIds) {
       try {
-        const response = await fetch(`${AES_BASE_URL}/division/${divId}/teams`, {
-          headers: { 'Accept': 'application/json' },
-          next: { revalidate: 60 }
-        });
+        const result = await fetchViaProxy(`/division/${divId}/teams`);
         
-        if (response.ok) {
-          const text = await response.text();
-          if (isJsonResponse(text)) {
-            const teams = JSON.parse(text);
-            if (Array.isArray(teams)) {
-              allTeams.push(...teams);
-            }
-          } else {
-            htmlResponseCount++;
-          }
+        if (result.status === 'ok' && Array.isArray(result.data)) {
+          allTeams.push(...result.data);
+        } else if (result.status === 'not_published') {
+          notPublishedCount++;
         }
       } catch (e) {
       }
@@ -92,7 +80,7 @@ export async function fetchAllTeams(): Promise<FetchResult<Team[]>> {
       };
     }
     
-    if (htmlResponseCount === divisionIds.length) {
+    if (notPublishedCount > 0) {
       return {
         data: fallbackTeams,
         isFallback: false,
@@ -115,37 +103,29 @@ export async function fetchAllTeams(): Promise<FetchResult<Team[]>> {
 
 export async function fetchPoolMatches(): Promise<FetchResult<Match[]>> {
   try {
-    const response = await fetch(`${AES_BASE_URL}/pool-matches`, {
-      headers: { 'Accept': 'application/json' },
-      next: { revalidate: 60 }
-    });
+    const result = await fetchViaProxy('/pool-matches');
     
-    if (response.ok) {
-      const text = await response.text();
-      if (isJsonResponse(text)) {
-        const data = JSON.parse(text);
-        return {
-          data: Array.isArray(data) ? data : [],
-          isFallback: false,
-          timestamp: new Date().toISOString()
-        };
-      } else {
-        return {
-          data: [],
-          isFallback: false,
-          isNotPublished: true,
-          timestamp: new Date().toISOString(),
-          error: 'Pool matches not published yet'
-        };
-      }
+    if (result.status === 'ok') {
+      return {
+        data: Array.isArray(result.data) ? result.data : [],
+        isFallback: false,
+        timestamp: new Date().toISOString()
+      };
+    } else if (result.status === 'not_published') {
+      return {
+        data: [],
+        isFallback: false,
+        isNotPublished: true,
+        timestamp: new Date().toISOString(),
+        error: 'Pool matches not published yet'
+      };
     }
     
-    throw new Error(`HTTP ${response.status}`);
+    throw new Error(result.error || 'Failed to fetch pool matches');
   } catch (error) {
     return {
       data: [],
       isFallback: true,
-      isNotPublished: false,
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'API connection error'
     };
@@ -154,37 +134,29 @@ export async function fetchPoolMatches(): Promise<FetchResult<Match[]>> {
 
 export async function fetchBracketMatches(): Promise<FetchResult<Match[]>> {
   try {
-    const response = await fetch(`${AES_BASE_URL}/bracket-matches`, {
-      headers: { 'Accept': 'application/json' },
-      next: { revalidate: 60 }
-    });
+    const result = await fetchViaProxy('/bracket-matches');
     
-    if (response.ok) {
-      const text = await response.text();
-      if (isJsonResponse(text)) {
-        const data = JSON.parse(text);
-        return {
-          data: Array.isArray(data) ? data : [],
-          isFallback: false,
-          timestamp: new Date().toISOString()
-        };
-      } else {
-        return {
-          data: [],
-          isFallback: false,
-          isNotPublished: true,
-          timestamp: new Date().toISOString(),
-          error: 'Bracket not published yet'
-        };
-      }
+    if (result.status === 'ok') {
+      return {
+        data: Array.isArray(result.data) ? result.data : [],
+        isFallback: false,
+        timestamp: new Date().toISOString()
+      };
+    } else if (result.status === 'not_published') {
+      return {
+        data: [],
+        isFallback: false,
+        isNotPublished: true,
+        timestamp: new Date().toISOString(),
+        error: 'Bracket not published yet'
+      };
     }
     
-    throw new Error(`HTTP ${response.status}`);
+    throw new Error(result.error || 'Failed to fetch bracket');
   } catch (error) {
     return {
       data: [],
       isFallback: true,
-      isNotPublished: false,
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'API connection error'
     };
@@ -193,37 +165,29 @@ export async function fetchBracketMatches(): Promise<FetchResult<Match[]>> {
 
 export async function fetchPools(divisionId: number): Promise<FetchResult<Pool[]>> {
   try {
-    const response = await fetch(`${AES_BASE_URL}/division/${divisionId}/pools`, {
-      headers: { 'Accept': 'application/json' },
-      next: { revalidate: 60 }
-    });
+    const result = await fetchViaProxy(`/division/${divisionId}/pools`);
     
-    if (response.ok) {
-      const text = await response.text();
-      if (isJsonResponse(text)) {
-        const data = JSON.parse(text);
-        return {
-          data: Array.isArray(data) ? data : [],
-          isFallback: false,
-          timestamp: new Date().toISOString()
-        };
-      } else {
-        return {
-          data: [],
-          isFallback: false,
-          isNotPublished: true,
-          timestamp: new Date().toISOString(),
-          error: 'Pools not published yet'
-        };
-      }
+    if (result.status === 'ok') {
+      return {
+        data: Array.isArray(result.data) ? result.data : [],
+        isFallback: false,
+        timestamp: new Date().toISOString()
+      };
+    } else if (result.status === 'not_published') {
+      return {
+        data: [],
+        isFallback: false,
+        isNotPublished: true,
+        timestamp: new Date().toISOString(),
+        error: 'Pools not published yet'
+      };
     }
     
-    throw new Error(`HTTP ${response.status}`);
+    throw new Error(result.error || 'Failed to fetch pools');
   } catch (error) {
     return {
       data: [],
       isFallback: true,
-      isNotPublished: false,
       timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'API connection error'
     };
