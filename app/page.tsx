@@ -17,6 +17,7 @@ export default function Home() {
   const [bracketMatches, setBracketMatches] = useState<Match[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [isFallback, setIsFallback] = useState(false);
+  const [isNotPublished, setIsNotPublished] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -67,6 +68,11 @@ export default function Home() {
     
     setLastUpdated(new Date().toISOString());
     setIsFallback(eventResult.isFallback || teamsResult.isFallback);
+    setIsNotPublished(
+      teamsResult.isNotPublished === true ||
+      poolResult.isNotPublished === true ||
+      bracketResult.isNotPublished === true
+    );
     setIsLoading(false);
   };
 
@@ -110,6 +116,7 @@ export default function Home() {
       <Header 
         lastUpdated={lastUpdated}
         isFallback={isFallback}
+        isNotPublished={isNotPublished}
         onRefresh={loadData}
         onShare={handleShare}
       />
@@ -125,6 +132,30 @@ export default function Home() {
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">Loading event data...</p>
+          </div>
+        ) : isNotPublished ? (
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-6 text-center">
+            <svg className="w-16 h-16 mx-auto mb-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100 mb-2">
+              Schedule Not Posted Yet
+            </h2>
+            <p className="text-blue-800 dark:text-blue-200 mb-4">
+              Pool assignments and match schedules haven&apos;t been published by AES yet.
+            </p>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              This page updates automatically every 60 seconds. Check back closer to the event!
+            </p>
+            {lastUpdated && (
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-4">
+                Last checked: {new Date(lastUpdated).toLocaleTimeString('en-US', { 
+                  timeZone: 'America/Chicago',
+                  hour: 'numeric',
+                  minute: '2-digit'
+                })} CT
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-8">

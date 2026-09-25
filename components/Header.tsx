@@ -5,11 +5,12 @@ import { formatTime } from '@/lib/utils';
 interface HeaderProps {
   lastUpdated: string;
   isFallback: boolean;
+  isNotPublished?: boolean;
   onRefresh: () => void;
   onShare: () => void;
 }
 
-export default function Header({ lastUpdated, isFallback, onRefresh, onShare }: HeaderProps) {
+export default function Header({ lastUpdated, isFallback, isNotPublished, onRefresh, onShare }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
       <div className="max-w-4xl mx-auto px-4 py-4">
@@ -58,11 +59,15 @@ export default function Header({ lastUpdated, isFallback, onRefresh, onShare }: 
             {lastUpdated && (
               <div className="text-xs text-gray-500 dark:text-gray-500 text-right">
                 Updated {formatTime(lastUpdated)}
-                {isFallback && (
+                {isNotPublished ? (
+                  <span className="block text-blue-600 dark:text-blue-400 mt-0.5">
+                    (Not published)
+                  </span>
+                ) : isFallback ? (
                   <span className="block text-amber-600 dark:text-amber-400 mt-0.5">
                     (Offline mode)
                   </span>
-                )}
+                ) : null}
               </div>
             )}
           </div>

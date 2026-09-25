@@ -1,5 +1,5 @@
 import { EventData, Team, Match, Pool, PoolStanding } from './types';
-import { fallbackTeams, fallbackMatches, fallbackRefDuties, FALLBACK_TIMESTAMP } from './fallback-data';
+import { fallbackTeams } from './fallback-data';
 
 const AES_BASE_URL = 'https://results.advancedeventsystems.com/api/event/RGFsbGFzX0FuZ2Vsc19DbGFzc2ljXzIwMjY1';
 const EVENT_KEY = 'RGFsbGFzX0FuZ2Vsc19DbGFzc2ljXzIwMjY1';
@@ -7,8 +7,14 @@ const EVENT_KEY = 'RGFsbGFzX0FuZ2Vsc19DbGFzc2ljXzIwMjY1';
 export interface FetchResult<T> {
   data: T | null;
   isFallback: boolean;
+  isNotPublished?: boolean;
   timestamp: string;
   error?: string;
+}
+
+function isJsonResponse(text: string): boolean {
+  const trimmed = text.trim();
+  return (trimmed.startsWith('{') || trimmed.startsWith('[')) && !trimmed.includes('<!doctype');
 }
 
 export async function fetchEventData(): Promise<FetchResult<EventData>> {
@@ -44,7 +50,7 @@ export async function fetchEventData(): Promise<FetchResult<EventData>> {
         ]
       },
       isFallback: true,
-      timestamp: FALLBACK_TIMESTAMP,
+      timestamp: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
@@ -54,16 +60,24 @@ export async function fetchAllTeams(): Promise<FetchResult<Team[]>> {
   try {
     const divisionIds = [-50016, -50017, -50018, -50019];
     const allTeams: Team[] = [];
+    let htmlResponseCount = 0;
     
     for (const divId of divisionIds) {
       try {
-        const response = await fetch(`${AES_BASE_URL}/divisions/${divId}/teams`, {
+        const response = await fetch(`${AES_BASE_URL}/division/${divId}/teams`, {
+          headers: { 'Accept': 'application/json' },
           next: { revalidate: 60 }
         });
+        
         if (response.ok) {
-          const teams = await response.json();
-          if (Array.isArray(teams)) {
-            allTeams.push(...teams);
+          const text = await response.text();
+          if (isJsonResponse(text)) {
+            const teams = JSON.parse(text);
+            if (Array.isArray(teams)) {
+              allTeams.push(...teams);
+            }
+          } else {
+            htmlResponseCount++;
           }
         }
       } catch (e) {
@@ -78,13 +92,23 @@ export async function fetchAllTeams(): Promise<FetchResult<Team[]>> {
       };
     }
     
+    if (htmlResponseCount === divisionIds.length) {
+      return {
+        data: fallbackTeams,
+        isFallback: true,
+        isNotPublished: true,
+        timestamp: new Date().toISOString(),
+        error: 'Schedule not published yet by AES'
+      };
+    }
+    
     throw new Error('No teams found');
   } catch (error) {
     return {
       data: fallbackTeams,
       isFallback: true,
-      timestamp: FALLBACK_TIMESTAMP,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'API connection error'
     };
   }
 }
@@ -92,25 +116,37 @@ export async function fetchAllTeams(): Promise<FetchResult<Team[]>> {
 export async function fetchPoolMatches(): Promise<FetchResult<Match[]>> {
   try {
     const response = await fetch(`${AES_BASE_URL}/pool-matches`, {
+      headers: { 'Accept': 'application/json' },
       next: { revalidate: 60 }
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    if (response.ok) {
+      const text = await response.text();
+      if (isJsonResponse(text)) {
+        const data = JSON.parse(text);
+        return {
+          data: Array.isArray(data) ? data : [],
+          isFallback: false,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        return {
+          data: [],
+          isFallback: true,
+          isNotPublished: true,
+          timestamp: new Date().toISOString(),
+          error: 'Pool matches not published yet'
+        };
+      }
     }
     
-    const data = await response.json();
-    return {
-      data: Array.isArray(data) ? data : [],
-      isFallback: false,
-      timestamp: new Date().toISOString()
-    };
+    throw new Error(`HTTP ${response.status}`);
   } catch (error) {
     return {
-      data: fallbackMatches,
+      data: [],
       isFallback: true,
-      timestamp: FALLBACK_TIMESTAMP,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'API connection error'
     };
   }
 }
@@ -118,51 +154,75 @@ export async function fetchPoolMatches(): Promise<FetchResult<Match[]>> {
 export async function fetchBracketMatches(): Promise<FetchResult<Match[]>> {
   try {
     const response = await fetch(`${AES_BASE_URL}/bracket-matches`, {
+      headers: { 'Accept': 'application/json' },
       next: { revalidate: 60 }
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    if (response.ok) {
+      const text = await response.text();
+      if (isJsonResponse(text)) {
+        const data = JSON.parse(text);
+        return {
+          data: Array.isArray(data) ? data : [],
+          isFallback: false,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        return {
+          data: [],
+          isFallback: true,
+          isNotPublished: true,
+          timestamp: new Date().toISOString(),
+          error: 'Bracket not published yet'
+        };
+      }
     }
     
-    const data = await response.json();
-    return {
-      data: Array.isArray(data) ? data : [],
-      isFallback: false,
-      timestamp: new Date().toISOString()
-    };
+    throw new Error(`HTTP ${response.status}`);
   } catch (error) {
     return {
       data: [],
       isFallback: true,
-      timestamp: FALLBACK_TIMESTAMP,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'API connection error'
     };
   }
 }
 
 export async function fetchPools(divisionId: number): Promise<FetchResult<Pool[]>> {
   try {
-    const response = await fetch(`${AES_BASE_URL}/divisions/${divisionId}/pools`, {
+    const response = await fetch(`${AES_BASE_URL}/division/${divisionId}/pools`, {
+      headers: { 'Accept': 'application/json' },
       next: { revalidate: 60 }
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    if (response.ok) {
+      const text = await response.text();
+      if (isJsonResponse(text)) {
+        const data = JSON.parse(text);
+        return {
+          data: Array.isArray(data) ? data : [],
+          isFallback: false,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        return {
+          data: [],
+          isFallback: true,
+          isNotPublished: true,
+          timestamp: new Date().toISOString(),
+          error: 'Pools not published yet'
+        };
+      }
     }
     
-    const data = await response.json();
-    return {
-      data: Array.isArray(data) ? data : [],
-      isFallback: false,
-      timestamp: new Date().toISOString()
-    };
+    throw new Error(`HTTP ${response.status}`);
   } catch (error) {
     return {
       data: [],
       isFallback: true,
-      timestamp: FALLBACK_TIMESTAMP,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : 'API connection error'
     };
   }
 }
